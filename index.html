@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Hash Rush</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#0d0d14;
+  color:#f0f0ff;
+  max-width:430px;
+  margin:0 auto;
+  min-height:100vh;
+  overflow-x:hidden;
+  padding-bottom:76px;
+}
+
+/* ── Design tokens ── */
+:root{
+  --bg:       #0d0d14;
+  --layer1:   #14141f;
+  --layer2:   #1c1c2e;
+  --layer3:   #232338;
+  --accent:   #00e5a0;
+  --accent2:  #7c3aed;
+  --accentDim:rgba(0,229,160,.15);
+  --accentDim2:rgba(124,58,237,.15);
+  --warn:     #f59e0b;
+  --danger:   #f43f5e;
+  --text:     #f0f0ff;
+  --muted:    #5a5a7a;
+  --border:   rgba(255,255,255,0.06);
+  --r:        14px;
+  --r-sm:     10px;
+}
+
+/* ══ Screens ══ */
+.screen{display:none;flex-direction:column;min-height:calc(100vh - 76px)}
+.screen.active{display:flex}
+
+/* ══ Header ══ */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 16px 10px;gap:10px;
+}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-mark{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;flex-shrink:0;
+}
+.logo-name{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.logo-name span{color:var(--accent)}
+.online-chip{
+  display:flex;align-items:center;gap:5px;
+  background:var(--layer2);border-radius:20px;
+  padding:5px 11px;font-size:11px;color:var(--muted);
+}
+.pulse{
+  width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;
+  animation:pulse-anim 2s infinite;
+}
+@keyframes pulse-anim{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+
+/* ══ Balance ══ */
+.balance-wrap{margin:0 14px 10px}
+.balance-inner{
+  background:linear-gradient(135deg,var(--layer2) 0%,#1a1a30 100%);
+  border-radius:18px;padding:18px;
+  border:1px solid rgba(0,229,160,.12);
+  position:relative;overflow:hidden;
+}
+.balance-inner::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,58,237,.2),transparent 70%);
+}
+.balance-row{display:flex;align-items:flex-start;justify-content:space-between}
+.bal-main{display:flex;align-items:center;gap:10px}
+.gem-icon{
+  width:48px;height:48px;border-radius:12px;
+  background:var(--accentDim2);
+  display:flex;align-items:center;justify-content:center;font-size:24px;
+}
+.bal-gems{font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1}
+.bal-ticker{font-size:13px;font-weight:700;color:var(--accent);margin-top:3px}
+.bal-usd{font-size:12px;color:var(--muted);margin-top:2px}
+.coin-chip{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(245,158,11,.12);border-radius:10px;
+  padding:8px 12px;font-size:15px;font-weight:800;color:var(--warn);
+  border:1px solid rgba(245,158,11,.2);
+}
+
+/* ══ Cards ══ */
+.card{
+  background:var(--layer1);border-radius:var(--r);
+  border:1px solid var(--border);margin:0 14px 10px;
+}
+.card-p{padding:15px}
+
+/* ══ Mining card ══ */
+.mine-card{
+  margin:0 14px 10px;border-radius:var(--r);padding:16px;
+  background:var(--layer1);
+  border:1.5px solid rgba(0,229,160,.25);
+  transition:border-color .3s;
+}
+.mine-card.idle{border-color:var(--border)}
+.mine-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.mine-icon{
+  width:46px;height:46px;border-radius:12px;
+  background:var(--accentDim);
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+}
+.mine-stats{flex:1;min-width:0}
+.energy-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.energy-lbl{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.3px}
+.energy-val{font-size:14px;font-weight:800}
+.ebar{height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.ebar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .5s}
+.mine-speed{text-align:right;flex-shrink:0}
+.speed-lbl{font-size:10px;color:var(--muted);letter-spacing:.3px;margin-bottom:2px}
+.speed-num{font-size:22px;font-weight:900;color:var(--accent);line-height:1}
+.speed-unit{font-size:10px;color:var(--muted)}
+.btn-mine{
+  width:100%;padding:14px;border-radius:11px;border:none;
+  font-size:15px;font-weight:800;cursor:pointer;
+  transition:opacity .15s,transform .1s;letter-spacing:-.2px;
+}
+.btn-mine.on{background:linear-gradient(90deg,#e11d48,#f43f5e);color:#fff}
+.btn-mine.off{background:linear-gradient(90deg,var(--accent2),#4f46e5);color:#fff}
+.btn-mine:active{transform:scale(.98);opacity:.85}
+.mine-sub{text-align:center;font-size:12px;color:var(--muted);margin-top:8px;cursor:pointer}
+.mine-sub span{color:var(--accent)}
+
+/* ══ Stat cards row ══ */
+.stats-row{display:flex;gap:8px;padding:0 14px;margin-bottom:10px}
+.stat-card{
+  flex:1;background:var(--layer1);border-radius:12px;
+  padding:12px;border:1px solid var(--border);text-align:center;
+}
+.stat-icon{font-size:20px;margin-bottom:5px}
+.stat-val{font-size:15px;font-weight:800}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ══ Banner card ══ */
+.banner{
+  margin:0 14px 10px;border-radius:var(--r);
+  background:linear-gradient(135deg,#1a1030,#1c1c30);
+  border:1px solid rgba(124,58,237,.25);padding:14px;
+}
+.banner-head{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.banner-body{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+.btn-outline{
+  width:100%;padding:11px;border-radius:9px;
+  border:1px solid var(--accent2);background:transparent;
+  color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;
+}
+.live-row{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;color:var(--muted);margin-top:10px;
+  padding-top:10px;border-top:1px solid var(--border);
+}
+.live-dot-sm{width:5px;height:5px;border-radius:50%;background:var(--danger);flex-shrink:0}
+
+/* ══ Section label ══ */
+.sec-lbl{
+  font-size:12px;font-weight:800;letter-spacing:.8px;
+  color:var(--muted);text-transform:uppercase;
+  padding:6px 14px 8px;
+}
+.sec-h{font-size:17px;font-weight:900;letter-spacing:-.4px;padding:4px 14px 10px}
+
+/* ══ Booster grid ══ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 14px}
+.boost-card{
+  background:var(--layer1);border-radius:13px;padding:13px;
+  border:1px solid var(--border);
+}
+.boost-card:hover{border-color:rgba(0,229,160,.2)}
+.boost-icon{font-size:26px;margin-bottom:7px}
+.boost-name{font-size:13px;font-weight:800;margin-bottom:4px}
+.boost-desc{font-size:11px;color:var(--muted);line-height:1.4;margin-bottom:7px;min-height:30px}
+.boost-rate{font-size:11px;color:var(--muted);margin-bottom:8px}
+.boost-rate span{color:var(--accent);font-weight:700}
+.btn-boost{
+  width:100%;padding:9px 0;border-radius:8px;border:none;
+  background:var(--accentDim2);color:var(--accent);
+  font-size:12px;font-weight:800;cursor:pointer;
+  border:1px solid rgba(124,58,237,.3);
+}
+.btn-boost:active{opacity:.8}
+
+/* ══ Equipment ══ */
+.equip-card{
+  background:var(--layer1);border-radius:13px;padding:12px;
+  border:1px solid var(--border);position:relative;
+}
+.equip-lvl{
+  position:absolute;top:9px;right:9px;
+  font-size:9px;color:var(--muted);background:var(--layer2);
+  padding:3px 7px;border-radius:5px;font-weight:700;
+}
+.equip-icon{font-size:24px;margin-bottom:20px}
+.equip-name{font-size:12px;font-weight:800;margin-bottom:3px}
+.equip-desc{font-size:11px;color:var(--muted);line-height:1.4}
+
+/* ══ Verify row ══ */
+.verify-row{
+  margin:0 14px 10px;background:var(--layer1);
+  border-radius:var(--r);padding:13px 14px;
+  display:flex;align-items:center;gap:12px;
+  border:1px solid var(--border);
+}
+.v-icon{
+  width:42px;height:42px;border-radius:11px;
+  background:var(--accentDim2);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
+}
+.v-info{flex:1;min-width:0}
+.v-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.v-sub{font-size:11px;color:var(--muted)}
+.v-bar-wrap{height:3px;background:var(--layer3);border-radius:2px;margin-top:5px;overflow:hidden}
+.v-bar{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px}
+.btn-chip{
+  background:var(--accentDim2);color:var(--accent);border:none;
+  border-radius:8px;padding:8px 13px;font-size:12px;font-weight:800;
+  cursor:pointer;flex-shrink:0;border:1px solid rgba(124,58,237,.3);
+}
+
+/* ══ Friends ══ */
+.friends-top{
+  padding:24px 16px 10px;text-align:center;
+}
+.friends-art{
+  width:72px;height:72px;border-radius:18px;margin:0 auto 12px;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));
+  display:flex;align-items:center;justify-content:center;font-size:34px;
+}
+.friends-h{font-size:22px;font-weight:900;letter-spacing:-.5px;margin-bottom:4px}
+.friends-sub{font-size:13px;color:var(--muted)}
+
+/* ══ Daily task card ══ */
+.task-card{margin:0 14px 10px;background:var(--layer1);border-radius:var(--r);padding:15px;border:1px solid var(--border)}
+.task-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.task-hdr-left{display:flex;align-items:center;gap:9px;min-width:0}
+.task-hdr-icon{
+  width:36px;height:36px;border-radius:9px;
+  background:rgba(245,158,11,.12);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+}
+.task-hdr-title{font-size:14px;font-weight:700}
+.task-hdr-sub{font-size:11px;color:var(--muted)}
+.timer{
+  background:var(--layer3);border-radius:8px;
+  padding:6px 11px;font-size:13px;font-weight:900;
+  font-variant-numeric:tabular-nums;color:var(--warn);flex-shrink:0;
+}
+.rew-box{
+  background:var(--layer2);border-radius:10px;
+  padding:12px;margin-bottom:12px;
+}
+.rew-title{font-size:12px;color:var(--muted);margin-bottom:8px}
+.rew-gems{font-size:17px;font-weight:900;color:var(--accent);margin-bottom:3px}
+.rew-usd{font-size:11px;color:var(--muted);font-weight:400;margin-left:4px}
+.rew-coin{font-size:13px;font-weight:700;color:var(--warn)}
+.prog-wrap{margin-bottom:4px}
+.prog-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+.prog-bar{height:5px;background:var(--layer3);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:3px;transition:width .3s}
+.btn-main{
+  width:100%;padding:14px;border-radius:11px;border:none;
+  background:linear-gradient(90deg,var(--accent2),#4f46e5);color:#fff;
+  font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;letter-spacing:-.2px;
+}
+.btn-main:active{opacity:.85;transform:scale(.99)}
+
+/* ══ Earn cards ══ */
+.info-card{
+  margin:0 14px 10px;background:var(--layer1);
+  border-radius:var(--r);padding:15px;border:1px solid var(--border);
+}
+.info-lbl{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.8px;margin-bottom:8px}
+.info-big{font-size:16px;font-weight:800;margin-bottom:6px}
+.info-acc{color:var(--accent);font-size:13px;font-weight:600;margin-bottom:3px}
+
+/* ══ Stars shop ══ */
+.shop-item{
+  display:flex;align-items:center;gap:12px;
+  padding:13px 14px;margin:0 14px 8px;
+  background:var(--layer1);border-radius:13px;
+  border:1px solid var(--border);
+}
+.shop-icon{font-size:30px;flex-shrink:0}
+.shop-info{flex:1;min-width:0}
+.shop-name{font-size:14px;font-weight:700;margin-bottom:3px}
+.shop-desc{font-size:11px;color:var(--muted)}
+.btn-star{
+  background:linear-gradient(135deg,#6d28d9,#4f46e5);
+  color:#fff;border:none;border-radius:9px;
+  padding:9px 13px;font-size:12px;font-weight:800;
+  cursor:pointer;white-space:nowrap;flex-shrink:0;
+}
+.btn-star:active{opacity:.8}
+
+/* ══ Roulette ══ */
+.roulette-page{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:20px;text-align:center;
+}
+.wheel-wrap{position:relative;width:220px;height:220px;margin-bottom:28px}
+.wheel-ptr{
+  position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+  font-size:22px;z-index:2;filter:drop-shadow(0 0 6px var(--accent));
+}
+.wheel{
+  width:220px;height:220px;border-radius:50%;
+  background:conic-gradient(
+    #7c3aed 0deg 51.4deg,
+    #00e5a0 51.4deg 102.8deg,
+    #f59e0b 102.8deg 154.3deg,
+    #f43f5e 154.3deg 205.7deg,
+    #4f46e5 205.7deg 257.1deg,
+    #06b6d4 257.1deg 308.6deg,
+    #7c3aed 308.6deg 360deg
+  );
+  border:5px solid var(--layer2);
+  box-shadow:0 0 30px rgba(124,58,237,.4);
+  transition:transform 1.7s cubic-bezier(.17,.67,.12,.99);
+}
+.roulette-h{font-size:22px;font-weight:900;margin-bottom:6px}
+.roulette-sub{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:22px;max-width:260px}
+.btn-spin{
+  padding:15px 42px;border-radius:13px;border:none;
+  background:linear-gradient(90deg,var(--accent2),#4f46e5);
+  color:#fff;font-size:16px;font-weight:900;cursor:pointer;
+  box-shadow:0 4px 20px rgba(124,58,237,.4);
+}
+.btn-spin:disabled{opacity:.4;cursor:default;box-shadow:none}
+.spin-note{font-size:12px;color:var(--muted);margin-top:10px}
+
+/* ══ Withdraw ══ */
+.wd-hero{text-align:center;padding:24px 16px 14px}
+.wd-icon{
+  width:72px;height:72px;border-radius:18px;
+  background:linear-gradient(135deg,var(--accent2),#4f46e5);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;margin:0 auto 12px;
+}
+.wd-h{font-size:24px;font-weight:900;margin-bottom:6px}
+.wd-sub{font-size:13px;color:var(--muted);line-height:1.5;max-width:270px;margin:0 auto}
+.verify-task{
+  margin:0 14px 10px;background:var(--layer1);
+  border-radius:var(--r);padding:14px;border:1px solid var(--border);
+}
+.vt-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.vt-label{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.8px}
+.vt-show{font-size:12px;color:var(--accent);cursor:pointer}
+.vt-item{display:flex;align-items:center;gap:11px}
+.vt-icon{
+  width:42px;height:42px;border-radius:11px;
+  background:var(--accentDim2);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  flex-shrink:0;position:relative;
+}
+.vt-x{
+  position:absolute;top:-4px;right:-4px;
+  width:15px;height:15px;border-radius:50%;
+  background:var(--danger);display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-weight:900;
+}
+.vt-info{flex:1}
+.vt-name{font-size:13px;font-weight:700}
+.vt-prog{font-size:11px;color:var(--muted)}
+.vt-bar{height:3px;background:var(--layer3);border-radius:2px;margin-top:5px;overflow:hidden}
+.vt-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px}
+.avail-block{text-align:center;padding:8px 14px 16px}
+.avail-lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
+.avail-num{
+  font-size:38px;font-weight:900;letter-spacing:-1.5px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  color:var(--accent);
+}
+.avail-usd{font-size:14px;color:var(--muted);margin-top:4px}
+.btn-wd{
+  width:calc(100% - 28px);margin:0 14px 12px;
+  padding:16px;border-radius:13px;border:none;
+  background:linear-gradient(90deg,var(--accent2),#4f46e5);
+  color:#fff;font-size:17px;font-weight:900;cursor:pointer;
+  box-shadow:0 4px 18px rgba(124,58,237,.35);
+}
+.btn-wd:active{opacity:.85}
+.live-sec{margin:0 14px}
+.live-hdr{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.8px;color:var(--muted);margin-bottom:10px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--danger);flex-shrink:0;animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.tx-wrap{background:var(--layer1);border-radius:13px;padding:12px 14px}
+.tx-tbl{width:100%;border-collapse:collapse;table-layout:fixed}
+.tx-tbl th{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.5px;padding:0 0 8px;text-align:left}
+.tx-tbl th:last-child{text-align:right}
+.tx-tbl td{padding:9px 0;border-top:1px solid var(--border);font-size:12px;vertical-align:middle}
+.tx-user{font-weight:700;font-size:13px}
+.tx-amt{font-weight:800}
+.tx-cur{font-size:10px;color:var(--muted);display:block}
+.tx-time{color:var(--muted);font-size:11px}
+.tx-btn{
+  background:var(--layer2);border:none;color:var(--accent);
+  border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer;white-space:nowrap;
+}
+
+/* ══ Navbar ══ */
+.navbar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;
+  background:#0a0a12;border-top:1px solid var(--border);
+  display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);
+}
+.nav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:10px 0 8px;cursor:pointer;
+  color:var(--muted);font-size:9px;font-weight:700;gap:3px;
+  letter-spacing:.3px;background:none;border:none;
+  transition:color .15s;position:relative;
+}
+.nav-btn.active{color:var(--accent)}
+.nav-icon{font-size:21px;line-height:1}
+.nav-ping{
+  position:absolute;top:8px;right:calc(50% - 18px);
+  width:7px;height:7px;border-radius:50%;
+  background:var(--danger);border:1.5px solid #0a0a12;
+}
+
+/* ══ Toast ══ */
+.toast{
+  position:fixed;top:20px;left:50%;transform:translateX(-50%);
+  background:var(--layer2);border:1px solid rgba(0,229,160,.25);
+  border-radius:12px;padding:12px 20px;font-size:13px;font-weight:700;
+  z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;
+  white-space:nowrap;max-width:90vw;text-align:center;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HOME ═══════════════ -->
+<div class="screen active" id="screen-home">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark">⚡</div>
+      <div class="logo-name">Hash<span>Rush</span></div>
+    </div>
+    <div class="online-chip">
+      <div class="pulse"></div>
+      <span id="online-count">11 053</span>&nbsp;онлайн
+    </div>
+  </div>
+
+  <div class="balance-wrap">
+    <div class="balance-inner">
+      <div class="balance-row">
+        <div class="bal-main">
+          <div class="gem-icon">💎</div>
+          <div>
+            <div class="bal-gems" id="gems-display">206 603</div>
+            <div class="bal-ticker">$HASH</div>
+            <div class="bal-usd">≈ <span id="usd-display">314.04</span> USD</div>
+          </div>
+        </div>
+        <div class="coin-chip">🪙&nbsp;<span id="coin-display">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mine-card active" id="mining-card">
+    <div class="mine-top">
+      <div class="mine-icon">⚡</div>
+      <div class="mine-stats">
+        <div class="energy-row">
+          <div class="energy-lbl">ЕНЕРГІЯ</div>
+          <div class="energy-val"><span id="energy-val">900</span> / 1 000</div>
+        </div>
+        <div class="ebar"><div class="ebar-fill" id="energy-bar" style="width:90%"></div></div>
+      </div>
+      <div class="mine-speed">
+        <div class="speed-lbl">ХЕШРЕЙТ</div>
+        <div class="speed-num" id="speed-val">3.00</div>
+        <div class="speed-unit">$HASH/s</div>
+      </div>
+    </div>
+    <button class="btn-mine on" id="mine-btn" onclick="toggleMining()">⏹ Зупинити майнінг</button>
+    <div class="mine-sub">⚡ <span onclick="goTab('earn')">Поповнити енергію</span></div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon">🌿</div>
+      <div class="stat-val">Рів. 1</div>
+      <div class="stat-lbl">Ефективність</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-val" id="ref-count">0</div>
+      <div class="stat-lbl">Рефералів</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-val">#—</div>
+      <div class="stat-lbl">Рейтинг</div>
+    </div>
+  </div>
+
+  <div class="banner">
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <div style="font-size:24px;flex-shrink:0;margin-top:2px">🌐</div>
+      <div>
+        <div class="banner-head">Хмарний майнінг — 24/7</div>
+        <div class="banner-body">Орендуйте сервер і заробляйте навіть офлайн. Забирайте нагороди в будь-який час.</div>
+      </div>
+    </div>
+    <button class="btn-outline">Дізнатись більше</button>
+    <div class="live-row">
+      <div class="live-dot-sm"></div>
+      <span id="live-ticker">580*** отримав 86 413 $HASH ≈ 131 USD ⚡</span>
+    </div>
+  </div>
+
+  <div class="verify-row">
+    <div class="v-icon">🌿</div>
+    <div class="v-info">
+      <div class="v-title">Рівень Ефективності</div>
+      <div class="v-sub">1 / 5 — 20%</div>
+      <div class="v-bar-wrap"><div class="v-bar" style="width:20%"></div></div>
+    </div>
+    <button class="btn-chip" onclick="goTab('earn')">Покращити</button>
+  </div>
+
+  <div class="sec-lbl">БУСТЕРИ</div>
+  <div class="grid2">
+    <div class="boost-card">
+      <div class="boost-icon">🚀</div>
+      <div class="boost-name">Турбо-режим</div>
+      <div class="boost-desc">Збільшує хешрейт майнера</div>
+      <div class="boost-rate">⚡ 3.00 → <span>3.50</span> $HASH/s</div>
+      <button class="btn-boost" onclick="buyBooster('Турбо-режим',10,0.5)">🪙 10 COIN</button>
+    </div>
+    <div class="boost-card">
+      <div class="boost-icon">🔱</div>
+      <div class="boost-name">Quad Core</div>
+      <div class="boost-desc">4 паралельних потоки хешів</div>
+      <div class="boost-rate">⚡ 3.00 → <span>5.50</span> $HASH/s</div>
+      <button class="btn-boost" onclick="buyBooster('Quad Core',50,2.5)">🪙 50 COIN</button>
+    </div>
+    <div class="boost-card">
+      <div class="boost-icon">🤖</div>
+      <div class="boost-name">AI Kernel</div>
+      <div class="boost-desc">Шанс на AI Супер-Блоки</div>
+      <div class="boost-rate">⚡ 3.00 → <span>4.50</span> $HASH/s</div>
+      <button class="btn-boost" onclick="buyBooster('AI Kernel',75,1.5)">🪙 75 COIN</button>
+    </div>
+    <div class="boost-card">
+      <div class="boost-icon">🌊</div>
+      <div class="boost-name">FloodMiner</div>
+      <div class="boost-desc">Серійний потік обчислень</div>
+      <div class="boost-rate">⚡ 3.00 → <span>6.00</span> $HASH/s</div>
+      <button class="btn-boost" onclick="buyBooster('FloodMiner',120,3.0)">🪙 120 COIN</button>
+    </div>
+  </div>
+
+  <div class="sec-lbl">ОБЛАДНАННЯ</div>
+  <div class="grid2" style="padding-bottom:16px">
+    <div class="equip-card"><div class="equip-lvl">Рів. 1</div><div class="equip-icon">🖥</div><div class="equip-name">CPU Blade</div><div class="equip-desc">Додаткове ядро майнінгу</div></div>
+    <div class="equip-card"><div class="equip-lvl">Рів. 1</div><div class="equip-icon">🔋</div><div class="equip-name">EcoChip</div><div class="equip-desc">Знижує витрати енергії</div></div>
+    <div class="equip-card"><div class="equip-lvl">Рів. 1</div><div class="equip-icon">📡</div><div class="equip-name">NetBridge</div><div class="equip-desc">Стабільне з'єднання</div></div>
+    <div class="equip-card"><div class="equip-lvl">Рів. 1</div><div class="equip-icon">💾</div><div class="equip-name">RAM-X</div><div class="equip-desc">Розширена оперативна пам'ять</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════ EARN ═══════════════ -->
+<div class="screen" id="screen-earn">
+  <div class="sec-h" style="padding-top:18px">📋 Завдання</div>
+
+  <div class="task-card">
+    <div class="task-hdr">
+      <div class="task-hdr-left">
+        <div class="task-hdr-icon">🔥</div>
+        <div>
+          <div class="task-hdr-title">Щоденне завдання</div>
+          <div class="task-hdr-sub">Скидається о 00:00 UTC</div>
+        </div>
+      </div>
+      <div class="timer" id="daily-timer">23:46:46</div>
+    </div>
+    <div class="rew-box">
+      <div class="rew-title">Запросіть 5 учасників сьогодні</div>
+      <div class="rew-gems">💎 +15 000 $HASH <span class="rew-usd">(≈22.80 USD)</span></div>
+      <div class="rew-coin">🪙 +5 COIN бонус</div>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-labels"><span>0 / 5 запрошено</span><span>0%</span></div>
+      <div class="prog-bar"><div class="prog-fill" style="width:0%"></div></div>
+    </div>
+    <button class="btn-main" onclick="goTab('friends')">👥 Запросити учасників</button>
+  </div>
+
+  <div class="sec-lbl" style="margin-top:4px">КУПИТИ ЗА ⭐ STARS</div>
+  <div class="shop-item">
+    <div class="shop-icon">⚡</div>
+    <div class="shop-info">
+      <div class="shop-name">Енергопак ×10</div>
+      <div class="shop-desc">Миттєво відновлює енергію до максимуму</div>
+    </div>
+    <button class="btn-star" onclick="buyStars('batteries_10',25)">25 ⭐</button>
+  </div>
+  <div class="shop-item">
+    <div class="shop-icon">🚀</div>
+    <div class="shop-info">
+      <div class="shop-name">Турбо на 24 год</div>
+      <div class="shop-desc">×2 хешрейт на добу</div>
+    </div>
+    <button class="btn-star" onclick="buyStars('turbo_24h',50)">50 ⭐</button>
+  </div>
+  <div class="shop-item">
+    <div class="shop-icon">💎</div>
+    <div class="shop-info">
+      <div class="shop-name">Pro-акаунт / місяць</div>
+      <div class="shop-desc">Хмарний майнінг + всі бустери розблоковано</div>
+    </div>
+    <button class="btn-star" onclick="buyStars('premium_month',200)">200 ⭐</button>
+  </div>
+  <div class="shop-item" style="margin-bottom:16px">
+    <div class="shop-icon">🎰</div>
+    <div class="shop-info">
+      <div class="shop-name">Спіни рулетки ×10</div>
+      <div class="shop-desc">Пакет прокруток без витрат монет</div>
+    </div>
+    <button class="btn-star" onclick="buyStars('spins_10',30)">30 ⭐</button>
+  </div>
+</div>
+
+<!-- ═══════════════ FRIENDS ═══════════════ -->
+<div class="screen" id="screen-friends">
+  <div class="friends-top">
+    <div class="friends-art">👥</div>
+    <div class="friends-h">Запросити друзів</div>
+    <div class="friends-sub">Заробляйте разом більше</div>
+  </div>
+
+  <div class="task-card">
+    <div class="task-hdr">
+      <div class="task-hdr-left">
+        <div class="task-hdr-icon">🔥</div>
+        <div>
+          <div class="task-hdr-title">Щоденне завдання</div>
+          <div class="task-hdr-sub">Скидається о 00:00 UTC</div>
+        </div>
+      </div>
+      <div class="timer" id="daily-timer2">23:46:46</div>
+    </div>
+    <div class="rew-box">
+      <div class="rew-title">Запросіть 5 учасників сьогодні</div>
+      <div class="rew-gems">💎 +15 000 $HASH <span class="rew-usd">(≈22.80 USD)</span></div>
+      <div class="rew-coin">🪙 +5 COIN бонус</div>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-labels">
+        <span id="fr-label">0 / 5 запрошено</span>
+        <span id="fr-pct">0%</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" id="fr-bar" style="width:0%"></div></div>
+    </div>
+    <button class="btn-main" onclick="inviteFriend()">🔗 Поділитись посиланням</button>
+  </div>
+
+  <div class="info-card">
+    <div class="info-lbl">ВИ ОТРИМУЄТЕ</div>
+    <div class="info-big">+2 500 $HASH за кожного учасника</div>
+    <div class="info-acc">+5% пасивний дохід від рефералів 1-го рівня</div>
+    <div class="info-acc" style="font-size:12px">+2% пасивний дохід від рефералів 2-го рівня</div>
+  </div>
+  <div class="info-card" style="margin-bottom:16px">
+    <div class="info-lbl">ВОНИ ОТРИМУЮТЬ</div>
+    <div class="info-big">+5 000 $HASH стартовий бонус</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Бонус нараховується одразу після реєстрації за вашим посиланням</div>
+  </div>
+</div>
+
+<!-- ═══════════════ ROULETTE ═══════════════ -->
+<div class="screen" id="screen-roulette">
+  <div class="roulette-page">
+    <div class="wheel-wrap">
+      <div class="wheel-ptr">▼</div>
+      <div class="wheel" id="wheel"></div>
+    </div>
+    <div class="roulette-h">Колесо Фортуни</div>
+    <div class="roulette-sub">Крутіть та вигравайте $HASH і бонуси.<br>Результат формується сервером.</div>
+    <button class="btn-spin" id="spin-btn" onclick="spinWheel()">🎰 Крутити</button>
+    <div class="spin-note">Коштує 100 🪙 COIN або 1 ⭐ Star</div>
+  </div>
+</div>
+
+<!-- ═══════════════ WITHDRAW ═══════════════ -->
+<div class="screen" id="screen-withdraw">
+  <div class="wd-hero">
+    <div class="wd-icon">💸</div>
+    <div class="wd-h">Вивести кошти</div>
+    <div class="wd-sub">Виконайте верифікацію акаунта для виведення на зовнішній крипто-гаманець</div>
+  </div>
+
+  <div class="verify-task">
+    <div class="vt-hdr">
+      <div class="vt-label">ВЕРИФІКАЦІЯ АКАУНТА</div>
+      <div class="vt-show">Показати ↓</div>
+    </div>
+    <div class="vt-item">
+      <div class="vt-icon">🌿<div class="vt-x">✕</div></div>
+      <div class="vt-info">
+        <div class="vt-name">Рівень Ефективності</div>
+        <div class="vt-prog">1 / 5 рівень</div>
+        <div class="vt-bar"><div class="vt-fill" style="width:20%"></div></div>
+      </div>
+      <button class="btn-chip" onclick="goTab('earn')">Покращити</button>
+    </div>
+  </div>
+
+  <div class="avail-block">
+    <div class="avail-lbl">Доступно до виведення</div>
+    <div class="avail-num">💎 <span id="wd-gems">206 603</span></div>
+    <div class="avail-usd">≈ <span id="wd-usd">314.04</span> USD</div>
+  </div>
+
+  <button class="btn-wd">Вивести →</button>
+
+  <div class="live-sec">
+    <div class="live-hdr">
+      <div class="live-dot"></div>ВИПЛАТИ У РЕАЛЬНОМУ ЧАСІ
+    </div>
+    <div class="tx-wrap">
+      <table class="tx-tbl">
+        <thead>
+          <tr>
+            <th style="width:22%">ГРАВЕЦЬ</th>
+            <th style="width:30%">СУМА</th>
+            <th style="width:26%">ЧАС</th>
+            <th style="width:22%;text-align:right">TX</th>
+          </tr>
+        </thead>
+        <tbody id="tx-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div style="height:16px"></div>
+</div>
+
+<!-- ═══════════════ NAVBAR ═══════════════ -->
+<nav class="navbar">
+  <button class="nav-btn active" id="nav-home" onclick="goTab('home')">
+    <div class="nav-icon">🏠</div><span>Головна</span>
+  </button>
+  <button class="nav-btn" id="nav-earn" onclick="goTab('earn')">
+    <div class="nav-icon">📋</div><span>Завдання</span>
+  </button>
+  <button class="nav-btn" id="nav-friends" onclick="goTab('friends')">
+    <div class="nav-icon">👥</div><span>Друзі</span>
+  </button>
+  <button class="nav-btn" id="nav-roulette" onclick="goTab('roulette')">
+    <div class="nav-icon">🎰</div><span>Рулетка</span>
+    <div class="nav-ping"></div>
+  </button>
+  <button class="nav-btn" id="nav-withdraw" onclick="goTab('withdraw')">
+    <div class="nav-icon">💸</div><span>Вивести</span>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if(tg){ tg.ready(); tg.expand(); }
+
+/* ── State ── */
+let gems=206603, energy=900, maxEnergy=1000;
+let speed=3.0, mining=true, coins=0;
+let friendsInvited=0; const friendsGoal=5;
+let timerSecs=85606, spinDeg=0, isSpinning=false;
+
+/* ── Formatters ── */
+const fmt=n=>Math.floor(n).toLocaleString('uk-UA');
+const fmtF=n=>n.toFixed(2);
+
+/* ── Update all displays ── */
+function updateUI(){
+  document.getElementById('gems-display').textContent=fmt(gems);
+  document.getElementById('usd-display').textContent=fmtF(gems*.00152);
+  document.getElementById('coin-display').textContent=fmt(coins);
+  document.getElementById('energy-val').textContent=Math.round(energy);
+  document.getElementById('energy-bar').style.width=(energy/maxEnergy*100)+'%';
+  const wg=document.getElementById('wd-gems');
+  const wu=document.getElementById('wd-usd');
+  if(wg) wg.textContent=fmt(gems);
+  if(wu) wu.textContent=fmtF(gems*.00152);
+}
+
+/* ── Mining loop (10fps) ── */
+setInterval(()=>{
+  if(!mining||energy<=0) return;
+  gems+=speed/10;
+  energy=Math.max(0,energy-.05);
+  if(energy<=0) setMining(false);
+  updateUI();
+},100);
+
+function setMining(on){
+  mining=on;
+  const btn=document.getElementById('mine-btn');
+  const card=document.getElementById('mining-card');
+  btn.className='btn-mine '+(on?'on':'off');
+  btn.textContent=on?'⏹ Зупинити майнінг':'▶ Запустити майнінг';
+  card.className='mine-card '+(on?'active':'idle');
+}
+
+function toggleMining(){
+  if(mining){ setMining(false); }
+  else {
+    if(energy<=0){ showToast('⚡ Енергія вичерпана! Поповніть у розділі Завдання'); return; }
+    setMining(true);
+  }
+}
+
+/* ── Booster purchase (coins) ── */
+function buyBooster(name,cost,bonus){
+  if(coins<cost){ showToast('❌ Недостатньо 🪙 монет'); return; }
+  coins-=cost;
+  speed=parseFloat((speed+bonus).toFixed(2));
+  document.getElementById('speed-val').textContent=speed.toFixed(2);
+  updateUI();
+  showToast('✅ '+name+' активовано! +'+bonus+' $HASH/s');
+}
+
+/* ── Stars purchase → sends data to bot ── */
+function buyStars(id,stars){
+  if(tg){ tg.sendData(JSON.stringify({action:'buy',product_id:id})); }
+  else { showToast('⭐ Відкрийте у Telegram для оплати'); }
+}
+
+/* ── Invite friend ── */
+function inviteFriend(){
+  const uid=tg?.initDataUnsafe?.user?.id||'guest';
+  if(tg){ tg.openTelegramLink('https://t.me/share/url?url=https://t.me/YourBotUsername?start=ref_'+uid+'&text=Заробляй+%24HASH+у+Hash+Rush!'); }
+  friendsInvited=Math.min(friendsGoal,friendsInvited+1);
+  const pct=Math.round(friendsInvited/friendsGoal*100);
+  document.getElementById('fr-label').textContent=friendsInvited+' / '+friendsGoal+' запрошено';
+  document.getElementById('fr-pct').textContent=pct+'%';
+  document.getElementById('fr-bar').style.width=pct+'%';
+  document.getElementById('ref-count').textContent=friendsInvited;
+  if(friendsInvited>=friendsGoal){ gems+=15000; coins+=5; updateUI(); showToast('🎉 +15 000 $HASH і +5 COIN нараховано!'); }
+}
+
+/* ── Countdown timer ── */
+setInterval(()=>{
+  timerSecs=Math.max(0,timerSecs-1);
+  const h=String(Math.floor(timerSecs/3600)).padStart(2,'0');
+  const m=String(Math.floor((timerSecs%3600)/60)).padStart(2,'0');
+  const s=String(timerSecs%60).padStart(2,'0');
+  const v=h+':'+m+':'+s;
+  ['daily-timer','daily-timer2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=v; });
+},1000);
+
+/* ── Live TX feed ── */
+const txData=[
+  {user:'100***',amt:'41.64',cur:'GRAM',t:'19хв'},
+  {user:'899***',amt:'181.22',cur:'USD₮',t:'30хв'},
+  {user:'926***',amt:'157.04',cur:'USD₮',t:'35хв'},
+  {user:'987***',amt:'120.77',cur:'USD₮',t:'42хв'},
+  {user:'211***',amt:'156.99',cur:'GRAM',t:'45хв'},
+  {user:'930***',amt:'96.18',cur:'USD₮',t:'55хв'},
+  {user:'883***',amt:'88.68',cur:'GRAM',t:'56хв'},
+  {user:'927***',amt:'362.47',cur:'USD₮',t:'1г'},
+];
+const ICONS={GRAM:'💎','USD₮':'🔷'};
+
+function renderTx(){
+  const el=document.getElementById('tx-body');
+  if(!el) return;
+  el.innerHTML=txData.slice(0,8).map(r=>`<tr>
+    <td class="tx-user">${r.user}</td>
+    <td class="tx-amt">${ICONS[r.cur]||'💰'} ${r.amt}<span class="tx-cur">${r.cur}</span></td>
+    <td class="tx-time">${r.t} тому</td>
+    <td style="text-align:right"><button class="tx-btn">Tx ↗</button></td>
+  </tr>`).join('');
+}
+renderTx();
+
+setInterval(()=>{
+  const curs=['USD₮','GRAM'];
+  const cur=curs[Math.floor(Math.random()*2)];
+  const user=Math.floor(Math.random()*900+100)+'***';
+  const amt=(Math.random()*300+40).toFixed(2);
+  txData.unshift({user,amt,cur,t:'щойно'});
+  if(txData.length>12) txData.pop();
+  renderTx();
+  const el=document.getElementById('live-ticker');
+  if(el) el.textContent=user+' отримав '+Math.floor(Math.random()*150000)+' $HASH ≈ '+(Math.random()*250).toFixed(0)+' USD ⚡';
+},4500);
+
+/* ── Online counter ── */
+setInterval(()=>{
+  const el=document.getElementById('online-count');
+  if(!el) return;
+  const n=parseInt(el.textContent.replace(/\s/g,''))||11053;
+  el.textContent=(n+Math.round((Math.random()-.35)*12)).toLocaleString('uk-UA');
+},5000);
+
+/* ── Roulette ── */
+function spinWheel(){
+  if(isSpinning) return;
+  if(coins<100){ showToast('Потрібно 100 🪙 — купіть у розділі Завдання'); return; }
+  coins-=100; updateUI();
+  isSpinning=true;
+  const btn=document.getElementById('spin-btn');
+  btn.disabled=true; btn.textContent='Крутимо...';
+  spinDeg+=1440+Math.floor(Math.random()*360);
+  document.getElementById('wheel').style.transform='rotate('+spinDeg+'deg)';
+  setTimeout(()=>{
+    isSpinning=false; btn.disabled=false;
+    const prizes=[500,1000,2500,5000,750,3000,200,10000];
+    const won=prizes[Math.floor(Math.random()*prizes.length)];
+    gems+=won; updateUI();
+    btn.textContent='🎰 Крутити знову';
+    showToast('🎉 Виграш: +'+fmt(won)+' $HASH!');
+  },1800);
+}
+
+/* ── Navigation ── */
+function goTab(tab){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(n=>n.classList.remove('active'));
+  document.getElementById('screen-'+tab).classList.add('active');
+  document.getElementById('nav-'+tab).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+/* ── Toast ── */
+let _tt;
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+/* ── Stars payment result ── */
+if(tg){
+  tg.onEvent('invoiceClosed',d=>{
+    if(d.status==='paid'){
+      showToast('✅ Оплачено! Бонус нараховано');
+      gems+=5000; coins+=10; energy=maxEnergy;
+      updateUI();
+    }
+  });
+}
+
+updateUI();
+</script>
+</body>
+</html>
